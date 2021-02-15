@@ -1,6 +1,7 @@
 import datetime
+import logging
 
-from rest_framework import status, exceptions
+from rest_framework import exceptions, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -23,10 +24,12 @@ def gitlab_authenticate(request):
     gitlab_token = generate_gitlab_access_token(
         code=request.data["code"],
         grant_type="authorization_code",
-        redirect_uri="http://localhost:3000/login",
+        redirect_uri="http://localhost:3000/signin",
     )
 
     gitlab_user = retrieve_gitlab_user_info(access_token=gitlab_token)
+
+    gitlab_user_name = gitlab_user.get("name")
 
     try:
         user = User.objects.get(email=gitlab_user.get("email"))
@@ -38,6 +41,7 @@ def gitlab_authenticate(request):
         )
 
     if user is None:
+        logging.error(f"Gitlab account for {gitlab_user_name} was not created.")
         raise exceptions.AuthenticationFailed("user not created")
 
     res = get_refresh_access_token(user)
